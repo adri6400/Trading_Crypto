@@ -79,17 +79,20 @@ def convert_sol_to_usdt():
 
 def get_min_order_size(symbol):
     exchange_info = client.get_exchange_info()
+    min_qty = None
+    min_notional = None
+    step_size = None
     for s in exchange_info['symbols']:
         if s['symbol'] == symbol:
-            min_qty = None
-            min_notional = None
             for f in s['filters']:
                 if f['filterType'] == 'LOT_SIZE':
                     min_qty = float(f['minQty'])
+                    step_size = float(f['stepSize'])
                 elif f['filterType'] == 'NOTIONAL':
                     min_notional = float(f.get('minNotional', 0))
-            return min_qty, min_notional
-    return None, None
+            return min_qty, min_notional, step_size
+    return None, None, None
+
 
 def load_positions():
     positions = {}
@@ -118,7 +121,6 @@ def main():
 
     while True:
         usdt_balance = get_usdt_balance()
-        log_transaction(f"Solde USDT: {usdt_balance}")
         
         for symbol in SYMBOLS:
             closes = get_historical_data(symbol, INTERVAL, LOOKBACK_PERIOD)
@@ -126,12 +128,16 @@ def main():
             min_price_72h = np.min(closes)
             position = positions.get(symbol, {'in_position': False, 'buy_price': 0.0})
             
-            min_qty, min_notional = get_min_order_size(symbol)
-            if min_notional is None or min_qty is None:
+            # Obtenir les quantités minimales et le step_size
+            min_qty, min_notional, step_size = get_min_order_size(symbol)
+            if min_notional is None or min_qty is None or step_size is None:
                 log_transaction(f"Erreur : Impossible d'obtenir les minimums pour {symbol}")
                 continue
             
+            # Calculer la quantité possible et l'arrondir au step_size
             quantity = usdt_balance / current_price
+            quantity = math.floor(quantity / step_size) * step_size  # Arrondir selon le step_size
+            
             if quantity < min_qty or usdt_balance < min_notional:
                 continue
 
@@ -160,6 +166,7 @@ def main():
                     save_positions(positions)
 
         time.sleep(CHECK_INTERVAL)
+
 
 if __name__ == "__main__":
     main()
