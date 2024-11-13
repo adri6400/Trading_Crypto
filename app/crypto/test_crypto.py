@@ -19,7 +19,7 @@ PRICE_DROP_THRESHOLD = 0.02
 PRICE_INCREASE_TARGET = 0.015
 STOP_LOSS_THRESHOLD = 0.10
 MIN_USDT_BALANCE = 10
-INVEST_RATIO = 0.30  # Utilisez 10% du solde USDT disponible
+INVEST_RATIO = 0.40 # Utilisez 10% du solde USDT disponible
 CSV_FILE = 'positions.csv'
 LOG_FILE = 'transactions.log'
 
@@ -80,9 +80,7 @@ def main():
     positions = load_positions()
 
     while True:
-        usdt_balance = get_usdt_balance() * INVEST_RATIO  # Utiliser seulement une partie du solde
-        log_transaction(f"Solde USDT disponible pour trading: {usdt_balance}")
-        
+        usdt_balance = get_usdt_balance() * INVEST_RATIO  # Utiliser seulement une partie du solde        
         for symbol in SYMBOLS:
             closes = get_historical_data(symbol, INTERVAL, LOOKBACK_PERIOD)
             current_price = closes[-1]
