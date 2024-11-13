@@ -15,15 +15,15 @@ SYMBOLS = ['ETHUSDT', 'BNBUSDT', 'SOLUSDT', 'ADAUSDT', 'XRPUSDT', 'DOGEUSDT','XR
 INTERVAL = Client.KLINE_INTERVAL_1MINUTE
 LOOKBACK_PERIOD = '3 days ago UTC'
 CHECK_INTERVAL = 30
-PRICE_DROP_THRESHOLD = 0.02  # Seuil de baisse pour acheter
-PRICE_INCREASE_TARGET = 0.015  # Objectif de profit
-STOP_LOSS_THRESHOLD = 0.10  # Limite de perte (10%)
+PRICE_DROP_THRESHOLD = 0.02
+PRICE_INCREASE_TARGET = 0.015
+STOP_LOSS_THRESHOLD = 0.10
 MIN_USDT_BALANCE = 10
+INVEST_RATIO = 0.30  # Utilisez 10% du solde USDT disponible
 CSV_FILE = 'positions.csv'
 LOG_FILE = 'transactions.log'
 
 def log_transaction(message):
-    """Écrit un message de log dans le fichier."""
     with open(LOG_FILE, 'a') as log_file:
         log_file.write(f"{datetime.now()} - {message}\n")
     print(message)
@@ -37,45 +37,6 @@ def get_usdt_balance():
     account = client.get_account()
     balance_usdt = next((float(asset['free']) for asset in account['balances'] if asset['asset'] == 'USDT'), 0.0)
     return balance_usdt
-
-def get_asset_balance(asset):
-    account = client.get_account()
-    balance = next((float(asset_info['free']) for asset_info in account['balances'] if asset_info['asset'] == asset), 0.0)
-    return balance
-
-def sell_asset_to_usdt(asset_symbol, quantity):
-    order = client.order_market_sell(
-        symbol=asset_symbol,
-        quantity=quantity
-    )
-    log_transaction(f"Vendu {quantity} {asset_symbol} pour obtenir USDT.")
-    return order
-
-def convert_sol_to_usdt():
-    sol_balance = get_asset_balance('SOL')
-    if sol_balance > 0:
-        min_qty, min_notional = get_min_order_size('SOLUSDT')
-        
-        # Récupérez le stepSize pour arrondir la quantité au niveau accepté
-        exchange_info = client.get_exchange_info()
-        step_size = None
-        for s in exchange_info['symbols']:
-            if s['symbol'] == 'SOLUSDT':
-                for f in s['filters']:
-                    if f['filterType'] == 'LOT_SIZE':
-                        step_size = float(f['stepSize'])
-                        break
-
-        if step_size is None:
-            log_transaction("Erreur : Impossible de récupérer le stepSize pour SOLUSDT.")
-            return
-
-        sol_balance = math.floor(sol_balance / step_size) * step_size
-
-        if sol_balance >= min_qty:
-            sell_asset_to_usdt('SOLUSDT', sol_balance)
-        else:
-            log_transaction("Le solde SOL est trop faible pour être vendu.")
 
 def get_min_order_size(symbol):
     exchange_info = client.get_exchange_info()
@@ -92,7 +53,6 @@ def get_min_order_size(symbol):
                     min_notional = float(f.get('minNotional', 0))
             return min_qty, min_notional, step_size
     return None, None, None
-
 
 def load_positions():
     positions = {}
@@ -120,7 +80,8 @@ def main():
     positions = load_positions()
 
     while True:
-        usdt_balance = get_usdt_balance()
+        usdt_balance = get_usdt_balance() * INVEST_RATIO  # Utiliser seulement une partie du solde
+        log_transaction(f"Solde USDT disponible pour trading: {usdt_balance}")
         
         for symbol in SYMBOLS:
             closes = get_historical_data(symbol, INTERVAL, LOOKBACK_PERIOD)
@@ -166,7 +127,6 @@ def main():
                     save_positions(positions)
 
         time.sleep(CHECK_INTERVAL)
-
 
 if __name__ == "__main__":
     main()
