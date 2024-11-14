@@ -4,9 +4,14 @@ from binance.client import Client
 import numpy as np
 import csv
 import math
+import os
+from dotenv import load_dotenv
 # Remplacez par vos propres clés API
-API_KEY = 'wBk3JT4e3D66Ozla3SrVsj2yPtdKEIxO0ov367d4mvx0ltlgLWF3CInS43J1cXUZ'
-API_SECRET = 'JfvBOFAMvHWxp1162U2qU6in4neKzPDNRhsx6iNyc6Jdpds3Zx0OwYU6d026Pjcs'
+load_dotenv("../../.env")
+API_KEY = os.getenv('API_KEY')
+API_SECRET = os.getenv('API_SECRET')
+print(API_KEY)
+print(API_SECRET)
 
 client = Client(API_KEY, API_SECRET)
 
